@@ -1,2 +1,1 @@
-// API service
-export const api = {};
+export * from '../../lib/api';

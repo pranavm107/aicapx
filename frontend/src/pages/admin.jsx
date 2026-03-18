@@ -9,6 +9,7 @@ import {
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import styles from '../styles/Admin.module.css';
+import { getApplications, getStats, updateApplicationStatus } from '../../lib/api';
 
 // ─── CONTRACT CONFIG ──────────────────────────────────────────────────────────
 // Update this address after deploying AiRegistration.sol
@@ -169,18 +170,18 @@ export default function Admin() {
 
   const fetchApplications = async () => {
     setLoading(true);
-    try { setApplications(await (await fetch('http://localhost:8000/api/applications?status=Under Review')).json()); }
+    try { setApplications(await getApplications('Under Review')); }
     catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
   const fetchActiveProjects = async () => {
-    try { setActiveProjects(await (await fetch('http://localhost:8000/api/applications?status=Active')).json()); }
+    try { setActiveProjects(await getApplications('Active')); }
     catch (e) { console.error(e); }
   };
 
   const fetchStats = async () => {
-    try { setStats(await (await fetch('http://localhost:8000/api/stats')).json()); }
+    try { setStats(await getStats()); }
     catch (e) { console.error(e); }
   };
 
@@ -208,12 +209,9 @@ export default function Admin() {
 
   const persistApproval = async (appId, txHash) => {
     try {
-      await fetch(`http://localhost:8000/api/applications/${appId}/status`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'Active', contractAddress: CONTRACT_ADDRESS,
-          mintTxHash: txHash, explorerLink: `${BSC_EXPLORER}/tx/${txHash}`,
-        }),
+      await updateApplicationStatus(appId, {
+        status: 'Active', contractAddress: CONTRACT_ADDRESS,
+        mintTxHash: txHash, explorerLink: `${BSC_EXPLORER}/tx/${txHash}`,
       });
       setApplications(prev => prev.filter(a => a.id !== appId));
       fetchStats();
@@ -222,10 +220,7 @@ export default function Admin() {
 
   const handleReject = async (app) => {
     try {
-      await fetch(`http://localhost:8000/api/applications/${app.id}/status`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Rejected' }),
-      });
+      await updateApplicationStatus(app.id, { status: 'Rejected' });
       setApplications(prev => prev.filter(a => a.id !== app.id));
       setSelectedApp(null); fetchStats();
     } catch (e) { console.error(e); }

@@ -18,6 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import styles from '../styles/StartupSubmission.module.css';
+import { submitApplication } from '../../lib/api';
 
 const steps = [
   { id: 1, title: 'Company Verif.', icon: <Building2 size={18} /> },
@@ -64,31 +65,25 @@ export default function StartupSubmission() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:8000/api/applications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.projectName,
-          startupName: formData.companyName,
-          category: formData.category,
-          desc: formData.desc,
-          goal: formData.goal,
-          tokenSupply: formData.tokenSupply,
-          apy: formData.apy,
-          founderName: formData.founderName,
-          startupWallet: formData.startupWallet,
-          demoVideo: formData.demoVideo,
-          revenueProof: formData.revenueProof,
-          userCount: formData.userCount,
-          documents: formData.documents
-        })
+      await submitApplication({
+        name: formData.projectName,
+        startupName: formData.companyName,
+        category: formData.category,
+        desc: formData.desc,
+        goal: formData.goal,
+        tokenSupply: formData.tokenSupply,
+        apy: formData.apy,
+        founderName: formData.founderName,
+        startupWallet: formData.startupWallet,
+        demoVideo: formData.demoVideo,
+        revenueProof: formData.revenueProof,
+        userCount: formData.userCount,
+        documents: formData.documents,
       });
-      if (res.ok) {
-         setSubmissionStatus('review');
-      }
+      setSubmissionStatus('review');
     } catch (err) {
       console.error(err);
-      alert("Failed to connect to backend server.");
+      alert('Failed to connect to backend server.');
     }
   };
 

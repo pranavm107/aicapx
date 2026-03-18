@@ -6,6 +6,7 @@ import { useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId,
 import { parseEther } from 'viem';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import styles from '../styles/Market.module.css';
+import { getApplications } from '../../lib/api';
 
 // ─── CONTRACT CONFIG ────────────────────────────────────────────────────────
 // AIProjectFactory deployed on BSC Testnet
@@ -59,8 +60,7 @@ export default function Market() {
   useEffect(() => {
     const fetchApproved = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/applications?status=Active');
-        const data = await res.json();
+        const data = await getApplications('Active');
         const getIcon = (cat) => {
           if (cat.includes('Vision')) return <ImageIcon size={24} />;
           if (cat.includes('Health')) return <Activity size={24} />;
