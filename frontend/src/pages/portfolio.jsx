@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, TrendingUp, Activity, ShieldAlert, Cpu, Send, Loader, CheckCircle, ExternalLink, RefreshCw, Info, Users, PieChart } from 'lucide-react';
 import styles from '../styles/Portfolio.module.css';
-import { useAccount, useBalance, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
+import { useAccount, useBalance, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient, useChainId } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 // ─── CONTRACT CONFIG ──────────────────────────────────────────────────────────
@@ -41,6 +41,8 @@ export default function Portfolio() {
   const [distribution, setDistribution] = useState([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const publicClient = usePublicClient();
+  const chainId = useChainId();
+  const BSC_TESTNET_CHAIN_ID = 97;
 
   // ── Transfer Flow ──
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -49,23 +51,41 @@ export default function Portfolio() {
   const { writeContract: transferNft, data: txHash, isPending: isTxPending, error: txError, reset: resetTx } = useWriteContract();
   const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  const scanTokens = async () => {
-    if (!address || !nftBalance || nftBalance === 0n || !totalMints) {
+  const scanOwnedTokens = async (walletAddress) => {
+    if (!walletAddress || !totalMints || totalMints === 0n) {
       setOwnedTokens([]);
       return;
     }
     setIsScanning(true);
-    const tokens = [];
-    const total = Number(totalMints);
-    const balance = Number(nftBalance);
-    
-    // In a real production app, we would use an Indexer (Graph/Moralis).
-    // For this demo, we scan the most recent 100 tokens to find owner matches.
-    for (let i = total; i > 0 && tokens.length < balance && tokens.length < 100; i--) {
-      tokens.push({ id: i, name: `AutoAgent NFT #${i}` });
+    try {
+      const total = Number(totalMints);
+      const scanLimit = Math.min(total, 500);
+
+      // Batch all ownerOf calls via multicall
+      const calls = Array.from({ length: scanLimit }, (_, i) => ({
+        address: AAS_ADDRESS,
+        abi: AAS_ABI,
+        functionName: 'ownerOf',
+        args: [BigInt(i + 1)],
+      }));
+
+      const results = await publicClient.multicall({ contracts: calls, allowFailure: true });
+
+      const owned = results.reduce((acc, res, idx) => {
+        if (res.status === 'success' && res.result?.toLowerCase() === walletAddress.toLowerCase()) {
+          acc.push({ id: idx + 1, name: `AutoAgent NFT #${idx + 1}` });
+        }
+        return acc;
+      }, []);
+
+      console.log('Owned Tokens:', owned);
+      setOwnedTokens(owned);
+    } catch (err) {
+      console.error('scanOwnedTokens error:', err);
+      setOwnedTokens([]);
+    } finally {
+      setIsScanning(false);
     }
-    setOwnedTokens(tokens);
-    setIsScanning(false);
   };
 
   const analyzeHolders = async () => {
@@ -113,30 +133,31 @@ export default function Portfolio() {
     }
   };
 
-  useEffect(() => { scanTokens(); }, [address, nftBalance, totalMints]);
+  useEffect(() => { scanOwnedTokens(address); }, [address, nftBalance, totalMints]);
   useEffect(() => { if (isInfoOpen) analyzeHolders(); }, [isInfoOpen, totalMints]);
 
   const handleTransfer = () => {
+    if (chainId !== BSC_TESTNET_CHAIN_ID) return alert('Please switch to BSC Testnet (Chain ID 97).');
     if (!recipient.startsWith('0x') || recipient.length !== 42) return alert('Please enter a valid BSC address.');
-    if (ownedTokens.length === 0) return alert('No tokens to transfer.');
+    if (ownedTokens.length === 0) return alert('No verified owned tokens to transfer. Please wait for scan to complete.');
 
-    // ─── PERCENTAGE LOGIC ───
-    // Total NFTs Owned (e.g. 10) * Percent Selected (e.g. 50%) = Count to Send (e.g. 5)
-    const totalOwned = ownedTokens.length;
-    const sendCount = Math.max(1, Math.floor((totalOwned * selectedPercent) / 100));
-    
-    // Grab the first 'sendCount' IDs from the list
-    const tokenIdsToBatch = ownedTokens.slice(0, sendCount).map(t => BigInt(t.id));
+    const sendCount = Math.max(1, Math.floor((ownedTokens.length * selectedPercent) / 100));
+
+    // Only use verified owned token IDs — never assume
+    const tokenIds = ownedTokens.slice(0, sendCount).map(t => BigInt(t.id));
+
+    console.log('Owned Tokens:', ownedTokens);
+    console.log('Transferring:', tokenIds.map(id => id.toString()));
 
     transferNft({
       address: AAS_ADDRESS, abi: AAS_ABI, functionName: 'multiTransfer',
-      args: [recipient, tokenIdsToBatch]
+      args: [recipient, tokenIds],
     });
   };
 
   const closeTransferModal = () => {
     setIsTransferOpen(false); setRecipient(''); setSelectedPercent(25); resetTx();
-    if (isConfirmed) { refetchNft(); refetchBnb(); scanTokens(); }
+    if (isConfirmed) { refetchNft(); refetchBnb(); scanOwnedTokens(address); }
   };
 
   return (
