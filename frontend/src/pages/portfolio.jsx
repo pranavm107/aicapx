@@ -88,53 +88,84 @@ export default function Portfolio() {
     }
   };
 
-  const analyzeHolders = async () => {
+  const getOwnershipDistribution = async () => {
     if (!totalMints || totalMints === 0n) return;
     setIsAnalyzing(true);
     try {
       const total = Number(totalMints);
-      const holderCounts = {};
-      const calls = [];
-      
-      // We scan all tokens up to 200 (for demo performance)
-      const scanLimit = Math.min(total, 200);
-      
-      for (let i = 1; i <= scanLimit; i++) {
-        calls.push({
+      // Scan up to 1000 tokens; batch in chunks of 500 to avoid RPC limits
+      const scanLimit = Math.min(total, 1000);
+      const BATCH_SIZE = 500;
+      const allResults = [];
+
+      for (let start = 1; start <= scanLimit; start += BATCH_SIZE) {
+        const end = Math.min(start + BATCH_SIZE - 1, scanLimit);
+        const calls = Array.from({ length: end - start + 1 }, (_, i) => ({
           address: AAS_ADDRESS,
           abi: AAS_ABI,
           functionName: 'ownerOf',
-          args: [BigInt(i)],
-        });
+          args: [BigInt(start + i)],
+        }));
+        const batch = await publicClient.multicall({ contracts: calls, allowFailure: true });
+        allResults.push(...batch);
       }
 
-      // Execute multicall for high performance
-      const results = await publicClient.multicall({ contracts: calls });
-      
-      results.forEach((res) => {
-        if (res.status === 'success') {
+      // Count tokens per owner — skip failed calls (burned / non-existent IDs)
+      const holderCounts = {};
+      let validCount = 0;
+      allResults.forEach((res) => {
+        if (res.status === 'success' && res.result) {
           const owner = res.result;
           holderCounts[owner] = (holderCounts[owner] || 0) + 1;
+          validCount++;
         }
       });
 
-      const dist = Object.entries(holderCounts).map(([addr, count]) => ({
-        address: addr,
-        count: count,
-        percent: ((count / total) * 100).toFixed(2),
-        isYou: addr.toLowerCase() === address?.toLowerCase()
-      })).sort((a, b) => b.count - a.count);
+      // For the current wallet, use the authoritative balanceOf value to avoid scan gaps
+      const myActualCount = nftBalance ? Number(nftBalance) : 0;
+      if (address) {
+        const myKey = Object.keys(holderCounts).find(k => k.toLowerCase() === address.toLowerCase());
+        if (myKey) {
+          const diff = myActualCount - holderCounts[myKey];
+          holderCounts[myKey] = myActualCount;
+          validCount += diff;
+        }
+      }
 
+      // Use validCount as denominator so percentages always sum to 100%
+      const dist = Object.entries(holderCounts)
+        .map(([addr, count]) => ({
+          address: addr,
+          count,
+          percent: ((count / validCount) * 100).toFixed(2),
+          isYou: addr.toLowerCase() === address?.toLowerCase(),
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      console.log('Ownership Distribution:', dist);
       setDistribution(dist);
+      setLastUpdated(new Date());
     } catch (err) {
-      console.error("Analysis error:", err);
+      console.error('getOwnershipDistribution error:', err);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const [lastUpdated, setLastUpdated] = useState(null);
+
   useEffect(() => { scanOwnedTokens(address); }, [address, nftBalance, totalMints]);
-  useEffect(() => { if (isInfoOpen) analyzeHolders(); }, [isInfoOpen, totalMints]);
+
+  // Real-time polling: re-fetch distribution every 15s while modal is open
+  useEffect(() => {
+    if (!isInfoOpen) return;
+    getOwnershipDistribution();
+    const interval = setInterval(() => {
+      getOwnershipDistribution();
+      setLastUpdated(new Date());
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [isInfoOpen, totalMints]);
 
   const handleTransfer = () => {
     if (chainId !== BSC_TESTNET_CHAIN_ID) return alert('Please switch to BSC Testnet (Chain ID 97).');
@@ -235,9 +266,16 @@ export default function Portfolio() {
               <h2 style={{ fontSize: '1.6rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Activity size={24} color="var(--color-secondary)"/> Your AI Assets
               </h2>
-              <button onClick={() => { refetchNft(); refetchBnb(); }} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
-                <RefreshCw size={14}/> Refresh
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isScanning && (
+                  <span style={{ fontSize: '0.78rem', color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Loader size={12} className="animate-spin" /> Scanning tokens…
+                  </span>
+                )}
+                <button onClick={() => { refetchNft(); refetchBnb(); scanOwnedTokens(address); }} style={{ background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+                  <RefreshCw size={14}/> Refresh
+                </button>
+              </div>
             </div>
             
             {(nftBalance === 0n || nftBalance === undefined) ? (
@@ -366,7 +404,7 @@ export default function Portfolio() {
 
                   {txError && (
                     <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '0.8rem' }}>
-                      <strong>Note:</strong> Batch transfer requires contract upgrade. Please fund your deployer wallet.
+                      <strong>Error:</strong> {txError.shortMessage || txError.message || 'Transaction failed. Please try again.'}
                     </div>
                   )}
                 </>
@@ -394,6 +432,24 @@ export default function Portfolio() {
                 </div>
                 <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>Ownership Distribution</h2>
                 <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem' }}>Transparency on share allocation for <strong>AutoAgent Systems</strong>.</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '12px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', background: 'rgba(44,194,149,0.1)', color: 'var(--color-secondary)', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-secondary)', display: 'inline-block', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                    LIVE · Refreshes every 15s
+                  </span>
+                  <button
+                    onClick={() => getOwnershipDistribution()}
+                    disabled={isAnalyzing}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', padding: '4px 8px' }}
+                  >
+                    <RefreshCw size={12} className={isAnalyzing ? 'animate-spin' : ''} /> Refresh now
+                  </button>
+                </div>
+                {lastUpdated && (
+                  <p style={{ fontSize: '0.68rem', color: 'var(--color-muted)', marginTop: '6px' }}>
+                    Last updated: {lastUpdated.toLocaleTimeString()}
+                  </p>
+                )}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
@@ -412,6 +468,9 @@ export default function Portfolio() {
                       <div className="glass" style={{ padding: '12px', borderRadius: '12px', textAlign: 'center' }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>Supply Minted</p>
                         <h4 style={{ fontSize: '1.1rem' }}>{totalMints?.toString()} F-NFTs</h4>
+                        {totalMints && Number(totalMints) > 1000 && (
+                          <p style={{ fontSize: '0.65rem', color: 'var(--color-muted)', marginTop: '2px' }}>Showing top 1000</p>
+                        )}
                       </div>
                     </div>
                     
@@ -458,6 +517,10 @@ export default function Portfolio() {
         @keyframes spin { 
           from { transform: rotate(0deg); } 
           to { transform: rotate(360deg); } 
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
         }
       `}</style>
     </div>

@@ -102,6 +102,11 @@ export default function Admin() {
   // idle | wallet | mining | success | error
   const [txError, setTxError]           = useState(null);
 
+  // ── Mint tab flow ──
+  const [mintPhase, setMintPhase]   = useState('idle');
+  const [mintedHash, setMintedHash] = useState(null);
+  const [mintError, setMintError]   = useState(null);
+
 
 
   // ── Wagmi ──

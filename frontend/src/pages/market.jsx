@@ -103,9 +103,14 @@ export default function Market() {
     if (!investAmount || parseFloat(investAmount) <= 0) return;
     setTxError(null);
     try {
-      // Calculate shares: for now 1 BNB = 10,000 shares for test
-      // Or use the project supply/goal ratio if available
-      const sharesRequested = Math.floor(parseFloat(investAmount) * 10000);
+      // Shares = (BNB invested / funding goal in BNB) * tokenSupply
+      // Fallback: 1 BNB = 10,000 shares if project data is missing
+      const bnbVal = parseFloat(investAmount);
+      const goalBnb = selectedProject.goal ? selectedProject.goal / 300 : 0; // approx $300/BNB
+      const supply = selectedProject.tokenSupply || 10000;
+      const sharesRequested = goalBnb > 0
+        ? Math.max(1, Math.floor((bnbVal / goalBnb) * supply))
+        : Math.floor(bnbVal * 10000);
 
       writeContract({
         address: CONTRACT_ADDRESS,
