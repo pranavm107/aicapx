@@ -50,9 +50,34 @@ let applications = [
     explorerLink:    "https://testnet.bscscan.com/address/0x0B306BF915C4d645ff596e518fAf3F9669b97016",
     createdAt:       Date.now() - 86400000,
     approvedAt:      Date.now() - 3600000
+  },
+  {
+    id:              2,
+    name:            "VisionCore AI",
+    startupName:     "VisionCore Inc.",
+    category:        "Computer Vision",
+    desc:            "Developing next-generation computer vision models for retail analytics and automated checkout systems.",
+    goal:            150000,
+    tokenSupply:     7500,
+    tokenPrice:      20,
+    raised:          0,
+    apy:             "14-20%",
+    status:          "Under Review",
+    founderName:     "Sarah Chen",
+    startupWallet:   "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    documents:       ["Retail_Whitepaper.pdf", "Sarah_ID.pdf"],
+    demoVideo:       "https://youtube.com/watch?v=vision123",
+    revenueProof:    "Merchant_Statement.pdf",
+    userCount:       420,
+    contractAddress: null,
+    onChainProjectId: null,
+    mintTxHash:      null,
+    explorerLink:    null,
+    createdAt:       Date.now() - 43200000,
+    approvedAt:      null
   }
 ];
-let nextId = 2;
+let nextId = 3;
 
 // ─── Health ──────────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

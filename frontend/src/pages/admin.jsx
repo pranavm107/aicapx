@@ -304,9 +304,23 @@ export default function Admin() {
               { id:TABS.ACTIVE, label:'Approved List', icon:<CheckCircle size={15}/>, badge:activeProjects.length },
             ].map(t=>(
               <button key={t.id} onClick={()=>setActiveTab(t.id)}
-                style={{ display:'flex', alignItems:'center', gap:'8px', padding:'11px 22px', background:'none', border:'none', cursor:'pointer', fontSize:'0.9rem', borderBottom:activeTab===t.id?'2px solid var(--color-secondary)':'2px solid transparent', color:activeTab===t.id?'white':'var(--color-muted)', fontWeight:activeTab===t.id?'600':'400', marginBottom:'-1px', transition:'all 0.2s' }}>
+                style={{ 
+                  display:'flex', 
+                  alignItems:'center', 
+                  gap:'8px', 
+                  padding:'11px 22px', 
+                  background:'none', 
+                  border:'none', 
+                  cursor:'pointer', 
+                  fontSize:'0.9rem', 
+                  borderBottom:activeTab===t.id?'2px solid var(--color-secondary)':'2px solid transparent', 
+                  color:activeTab===t.id?'var(--color-text)':'var(--color-muted)', 
+                  fontWeight:activeTab===t.id?'700':'500', 
+                  marginBottom:'-1px', 
+                  transition:'all 0.2s' 
+                }}>
                 {t.icon}{t.label}
-                {t.badge!=null && <span style={{ background:t.badge>0?'var(--color-primary)':'rgba(255,255,255,0.1)', color:'white', fontSize:'0.68rem', fontWeight:'700', padding:'2px 7px', borderRadius:'20px' }}>{t.badge}</span>}
+                {t.badge!=null && <span style={{ background:t.badge>0?'var(--color-primary)':'rgba(0,0,0,0.08)', color:t.badge>0?'white':'var(--color-muted)', fontSize:'0.68rem', fontWeight:'700', padding:'2px 8px', borderRadius:'20px', marginLeft:'4px' }}>{t.badge}</span>}
               </button>
             ))}
 

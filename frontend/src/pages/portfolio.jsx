@@ -156,15 +156,9 @@ export default function Portfolio() {
 
   useEffect(() => { scanOwnedTokens(address); }, [address, nftBalance, totalMints]);
 
-  // Real-time polling: re-fetch distribution every 15s while modal is open
   useEffect(() => {
     if (!isInfoOpen) return;
     getOwnershipDistribution();
-    const interval = setInterval(() => {
-      getOwnershipDistribution();
-      setLastUpdated(new Date());
-    }, 15000);
-    return () => clearInterval(interval);
   }, [isInfoOpen, totalMints]);
 
   const handleTransfer = () => {
@@ -432,17 +426,13 @@ export default function Portfolio() {
                 </div>
                 <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>Ownership Distribution</h2>
                 <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem' }}>Transparency on share allocation for <strong>AutoAgent Systems</strong>.</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '12px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', background: 'rgba(44,194,149,0.1)', color: 'var(--color-secondary)', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-secondary)', display: 'inline-block', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                    LIVE · Refreshes every 15s
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '12px' }}>
                   <button
                     onClick={() => getOwnershipDistribution()}
                     disabled={isAnalyzing}
-                    style={{ background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', padding: '4px 8px' }}
+                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', color: 'var(--color-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', padding: '4px 12px' }}
                   >
-                    <RefreshCw size={12} className={isAnalyzing ? 'animate-spin' : ''} /> Refresh now
+                    <RefreshCw size={12} className={isAnalyzing ? 'animate-spin' : ''} /> Refresh
                   </button>
                 </div>
                 {lastUpdated && (
