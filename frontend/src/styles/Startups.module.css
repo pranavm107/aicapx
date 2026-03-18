@@ -1,0 +1,127 @@
+.pageContainer {
+  padding-top: 120px;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.header h1 {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+  color: #0f172a;
+}
+
+.header p {
+  color: var(--color-muted);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.contentWrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.infoSection {
+  padding-right: 20px;
+}
+
+.infoSection h2 {
+  font-size: 1.8rem;
+  margin-bottom: 24px;
+}
+
+.stepList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stepItem {
+  display: flex;
+  margin-bottom: 32px;
+}
+
+.stepIcon {
+  width: 52px;
+  height: 52px;
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--color-accent);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(251, 191, 36, 0.05);
+}
+
+.stepContent h3 {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.stepContent p {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.formContainer {
+  padding: 32px;
+}
+
+.formGroup {
+  margin-bottom: 24px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+
+.formControl {
+  width: 100%;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.formControl:focus {
+  border-color: var(--color-primary);
+  background: #ffffff;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.1);
+}
+
+textarea.formControl {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1.1rem;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .contentWrapper {
+    grid-template-columns: 1fr;
+  }
+}
